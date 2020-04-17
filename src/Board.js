@@ -27,64 +27,83 @@ import "./Board.css";
  *
  **/
 
- // chance light starts on:
- // needs to receive float (or int converted to probability value .00 to 1.00)
- // default to 0.5
- // 
+function Board({ nrows = 5, ncols = 5, chanceLightStartsOn = 0.5 }) {
+	const [board, setBoard] = useState(createBoard());
 
-function Board({ nrows, ncols, chanceLightStartsOn=0.5 }) {
-  const [board, setBoard] = useState(createBoard());
+	/** create a board nrows high/ncols wide, each cell randomly lit or unlit */
+	// TODO: create array-of-arrays of true/false values
+	function createBoard() {
+		let initialBoard = [];
+		//push array of size ncols into each row, then insert bool into each element
+		for (let row = 0; row < nrows; row++) {
+			initialBoard.push(new Array(ncols));
+			for (let col = 0; col < ncols; col++) {
+				initialBoard[row][col] = getRandomBool(chanceLightStartsOn);
+			}
+		}
+		console.log(`creating board rows ${nrows} cols ${ncols} with ${chanceLightStartsOn * 100}% chance of true`);
+		return initialBoard;
+	}
 
-  /** create a board nrows high/ncols wide, each cell randomly lit or unlit */
-  // TODO: create array-of-arrays of true/false values
-  function createBoard() {
-    let initialBoard = [];
-    //push array of size ncols into each row
-    for (let row=0; row < nrows; row++){
-      initialBoard.push(new Array(ncols));
-      for (let col=0; col < ncols; col++) {
-        initialBoard[row][col]=getRandomBool(chanceLightStartsOn);
-      }
-    }
-    return initialBoard;
-  }
+	// hasWon bool: player wins when all board array elements contain false
+	const hasWon = (board) => board.flat().every(el => !el);
 
-  // returns bool with weighted probability.
-  // ex: 0.65 has 65% chance of returning true
-  const getRandomBool = (prob) => (Math.random() >= 1-prob);
+	console.table(board);
 
-  // player wins when all board array elements contain false
-  function hasWon() {
-    // TODO: check the board in state to determine whether the player has won.
-  }
+	function flipCellsAround(coord) {
+		setBoard(oldBoard => {
+			const [y, x] = coord.split("-").map(Number);
 
-  function flipCellsAround(coord) {
-    setBoard(oldBoard => {
-      const [y, x] = coord.split("-").map(Number);
+			const flipCell = (y, x, boardCopy) => {
+				// if this coord is actually on board, flip it
 
-      const flipCell = (y, x, boardCopy) => {
-        // if this coord is actually on board, flip it
+				if (x >= 0 && x < ncols && y >= 0 && y < nrows) {
+					boardCopy[y][x] = !boardCopy[y][x];
+				}
+			};
 
-        if (x >= 0 && x < ncols && y >= 0 && y < nrows) {
-          boardCopy[y][x] = !boardCopy[y][x];
-        }
-      };
+			const boardCopy = oldBoard.map(row => [...row]);
+			flipCell(y, x, boardCopy);
+			flipCell(y, x - 1, boardCopy);
+			flipCell(y, x + 1, boardCopy);
+			flipCell(y - 1, x, boardCopy);
+			flipCell(y + 1, x, boardCopy);
+			return boardCopy;
+		});
+	}
 
-      // TODO: Make a (deep) copy of the oldBoard
+	// if the game is won, just show a winning msg & render nothing else
+	if (hasWon([true, false])) return (<h1>YOU WIN</h1>)
+	// TEMP passed in dummy array to keep win condition check off
 
-      // TODO: in the copy, flip this cell and the cells around it
+	// TODO
+	// make table board
+	let htmlBoard = [];
 
-      // TODO: return the copy
-    });
-  }
+	for (let y=0; y<nrows; y++) {
+		let row = [];
+		for (let x=0;x<ncols;x++){
+			let coord = `${y}-${x}`;
+			row.push(
+				<Cell key={coord} isLit={board[y][x]} flipCellsAroundMe={()=>flipCellsAround(coord)}/>
+			);
+		}
+		htmlBoard.push(<tr key={y}>{row}</tr>);
+	}
 
-  // if the game is won, just show a winning msg & render nothing else
-
-  // TODO
-
-  // make table board
-
-  // TODO
+	return (
+		<div>
+			<p>Board with rows {nrows} cols {ncols} with {chanceLightStartsOn * 100}% chance of lights on</p>
+			<p>{hasWon(board) ? 'winner' : 'no winner yet'}</p>
+			<table>
+				<tbody>{htmlBoard}</tbody>
+			</table>
+		</div>
+	)
 }
+
+// returns bool with weighted probability.
+// ex: 0.65 has 65% chance of returning true
+const getRandomBool = (prob) => (Math.random() >= 1 - prob);
 
 export default Board;
